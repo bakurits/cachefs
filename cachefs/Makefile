@@ -7,8 +7,8 @@ FLAGS=`pkg-config fuse3 --cflags --libs`
 # მისი სინტაქსი ასეთია:
 # სახელი : მოდულების სახელების რაზეც დამოკიდებულია
 # 		შესასრულებელი ბრძანება
-all : main.o 
-	$(CC) -o cachefs main.o $(FLAGS)
+all : main.o memcache.o
+	$(CC) -o cachefs main.o memcache.o $(FLAGS)
 
 # რიგითი მოდულის კონფიგურაცია:
 # სახელი : დამოკიდებულებების სია (აქ შეიძლება იყოს .h ჰედერ ფაილებიც)
@@ -16,9 +16,12 @@ all : main.o
 main.o : main.c 
 	$(CC) -c main.c $(FLAGS)
 
+memcache.o : memcache.c memcache.h
+	$(CC) -c memcache.c $(FLAGS)
+
 # დაგენერირებული არტიფაქტების წაშლა
 clean :
-	rm cachefs main.o
+	rm cachefs main.o memcache.o
 
 # თუ პროექტს დაამატებთ .c ფაილებს, მაშინ აქ უნდა დაამატოთ ახალი მოდული, main.o-ს მსგავსად. ასევე ახალი_ფაილი.o უნდა დაუმაროთ all-ს, და clean-ს. მაგალითად:
 # all : main.o new_file.o
