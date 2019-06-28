@@ -17,11 +17,19 @@
 #define MEMCACHED_PORT 11211
 #define MEMCACHED_ADDRESS "127.0.0.1"
 
+#define CONSISTENCY_KEY "bakurits-xoiquxtt"
+#define CONSISTENCY_VALUE 0xfff123
+
 struct memcache_t* memcache_init();
-bool memcache_get(struct memcache_t* memcache, const char* key, char* buff);
+void memcache_create(struct memcache_t*);
+
+bool memcache_is_consistent(struct memcache_t*);
+
+bool memcache_get(struct memcache_t* memcache, const char* key, void* buff);
 bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size);
 
-void memcache_free(struct memcache_t*);
+void memcache_clear(struct memcache_t*);
+void memcache_close(struct memcache_t*);
 
 #endif

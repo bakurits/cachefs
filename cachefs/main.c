@@ -30,6 +30,8 @@ static struct options {
     int show_help;
 } options;
 
+struct memcache_t* memcache = NULL;
+
 #define OPTION(t, p)                      \
     {                                     \
         t, offsetof(struct options, p), 1 \
@@ -45,6 +47,15 @@ static void* cachefs_init(struct fuse_conn_info* conn,
 {
     (void)conn;
     cfg->kernel_cache = 1;
+
+    memcache = memcache_init();
+    if (memcache != NULL && !memcache_is_consistent(memcache)) {
+        memcache_clear(memcache);
+        memcache_create(memcache);
+    }
+
+    printf("FileSistem Initialized\n\n\n");
+
     return NULL;
 }
 
@@ -112,16 +123,25 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
         memcpy(buf, options.contents + offset, size);
     } else
         size = 0;
-
     return size;
 }
 
-static struct fuse_operations hello_oper = {
+static int cachefs_statfs(const char* path, struct statvfs* buff)
+{
+}
+static void cachefs_destroy(void* private_data)
+{
+    memcache_close(memcache);
+}
+
+static struct fuse_operations cachefs_oper = {
     .init = cachefs_init,
     .getattr = cachefs_getattr,
     .readdir = cachefs_readdir,
     .open = cachefs_open,
     .read = cachefs_read,
+    .statfs = cachefs_statfs,
+    .destroy = cachefs_destroy
 };
 
 static void show_help(const char* progname)
@@ -161,7 +181,7 @@ int main(int argc, char* argv[])
         args.argv[0][0] = '\0';
     }
 
-    ret = fuse_main(args.argc, args.argv, &hello_oper, NULL);
+    ret = fuse_main(args.argc, args.argv, &cachefs_oper, NULL);
     fuse_opt_free_args(&args);
     return ret;
 }

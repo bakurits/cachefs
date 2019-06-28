@@ -1,5 +1,5 @@
 #include "memcache.h"
-
+#include <assert.h>
 struct memcache_t {
     int fd;
 };
@@ -23,17 +23,36 @@ struct memcache_t* memcache_init()
         return NULL;
 
     memcache->fd = clientfd;
+
     return memcache;
 }
 
-bool memcache_get(struct memcache_t* memcache, const char* key, char* buff) {}
+void memcache_create(struct memcache_t* memcache)
+{
+    assert(memcache == NULL);
+    int value = CONSISTENCY_VALUE;
+    memcache_add(memcache, CONSISTENCY_KEY, (void*)&value, sizeof(int));
+}
+
+bool memcache_is_consistent(struct memcache_t* memcache)
+{
+    assert(memcache != NULL);
+    int value;
+    return (memcache_get(memcache, CONSISTENCY_KEY, (void*)&value) && value == CONSISTENCY_VALUE);
+}
+
+bool memcache_get(struct memcache_t* memcache, const char* key, void* buff) {}
 bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size) {}
 
-void memcache_free(struct memcache_t* memcache)
+void memcache_close(struct memcache_t* memcache)
 {
     if (memcache == NULL)
         return;
     close(memcache->fd);
     free(memcache);
+}
+
+void memcache_clear(struct memcache_t* memcache)
+{
 }
