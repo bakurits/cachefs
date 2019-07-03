@@ -157,6 +157,17 @@ static void show_help(const char* progname)
 
 int main(int argc, char* argv[])
 {
+
+    struct memcache_t* memcache = memcache_init();
+    int a = 4;
+    int b;
+    for (int i = 1; i <= 10; i++) {
+        memcache_add(memcache, "bakuri", &i, sizeof(int));
+        memcache_get(memcache, "bakuri", &b);
+        assert(b == i);
+    }
+
+    return 0;
     int ret;
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 

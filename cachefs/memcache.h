@@ -20,16 +20,40 @@
 #define CONSISTENCY_KEY "bakurits-xoiquxtt"
 #define CONSISTENCY_VALUE 0xfff123
 
+/**
+ * Initializes memcache_t object for use
+ */
 struct memcache_t* memcache_init();
+
+/**
+ * Creates Memcached's metadata in memory
+ */
 void memcache_create(struct memcache_t*);
 
+/**
+ * Chechs if Memcached has valid kay for filesistem
+ */
 bool memcache_is_consistent(struct memcache_t*);
 
+/**
+ * Gets Memcached's records
+ */
 bool memcache_get(struct memcache_t* memcache, const char* key, void* buff);
+
+/**
+ * Adds data in Memcached
+ */
 bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size);
 
+/**
+ * clears all data in Memcached
+ */
 void memcache_clear(struct memcache_t*);
+
+/**
+ * removes memcache_t object 
+ */
 void memcache_close(struct memcache_t*);
 
 #endif
