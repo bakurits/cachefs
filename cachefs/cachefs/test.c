@@ -1,13 +1,3 @@
-/*
-  FUSE: Filesystem in Userspace
-  Copiyright (C) 2001-2007  Miklos Szered <miklos@szeredi.hu>
-
-  This program can be distributed under the terms of the GNU GPL.
-  See the file COPYING.
-*/
-
-#define FUSE_USE_VERSION 31
-
 #include "memcache.h"
 #include <assert.h>
 #include <errno.h>
