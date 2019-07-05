@@ -123,7 +123,7 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
         return false;
     }
     char result[64];
-    return (read(memcache->fd, result, 64) >= 0 && strcmp(result, "STORED") == 0);
+    return (read(memcache->fd, result, 64) >= 0 && strncmp(result, "STORED", 6) == 0);
 }
 
 void memcache_close(struct memcache_t* memcache)
@@ -134,6 +134,16 @@ void memcache_close(struct memcache_t* memcache)
     free(memcache);
 }
 
-void memcache_clear(struct memcache_t* memcache)
+bool memcache_clear(struct memcache_t* memcache)
 {
+    char data[2048];
+    int filled = sprintf(data, "flush_all\r\n");
+
+    if (write(memcache->fd, data, filled) < filled) {
+        assert(1 == 2);
+        return false;
+    }
+
+    char result[64];
+    return (read(memcache->fd, result, 64) >= 0 && strncmp(result, "OK", 2) == 0);
 }

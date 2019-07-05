@@ -49,7 +49,7 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
 /**
  * clears all data in Memcached
  */
-void memcache_clear(struct memcache_t*);
+bool memcache_clear(struct memcache_t*);
 
 /**
  * removes memcache_t object 
