@@ -101,7 +101,8 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
     if (read(memcache->fd, data, 2048) >= 0) {
         char ret_key[64];
         int ret_exp, ret_size;
-        sscanf(data, "VALUE %s %d %d\r\n", ret_key, &ret_exp, &ret_size);
+        if (sscanf(data, "VALUE %s %d %d\r\n", ret_key, &ret_exp, &ret_size) < 3)
+            return false;
         memcpy(buff, data + line_start_index(data, 2), ret_size);
         return true;
     } else {
@@ -124,6 +125,19 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     }
     char result[64];
     return (read(memcache->fd, result, 64) >= 0 && strncmp(result, "STORED", 6) == 0);
+}
+
+bool memcache_delete(struct memcache_t* memcache, const char* key)
+{
+    char data[2048];
+    int filled = sprintf(data, "delete %s\r\n", key);
+
+    if (write(memcache->fd, data, filled) < filled) {
+        return false;
+    }
+
+    char result[64];
+    return (read(memcache->fd, result, 64) >= 0 && strncmp(result, "DELETED", 7) == 0);
 }
 
 void memcache_close(struct memcache_t* memcache)

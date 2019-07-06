@@ -74,6 +74,38 @@ void test4()
     printf("test 4 passed\n");
 }
 
+void test5()
+{
+    int a[10];
+    for (int i = 0; i < 10; i++) {
+        a[i] = 12312 - i * 34;
+        char key[30];
+        sprintf(key, "test5%d", i);
+        memcache_add(memcache, key, &a[i], sizeof(int));
+    }
+    for (int i = 0; i < 10; i++) {
+        char key[30];
+        sprintf(key, "test5%d", i);
+        if (i % 2 == 0)
+            memcache_delete(memcache, key);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        char key[30];
+
+        sprintf(key, "test5%d", i);
+        int b;
+        if (i % 2 == 0) {
+            assert(memcache_get(memcache, key, &b) == false);
+        } else {
+            memcache_get(memcache, key, &b);
+            assert(a[i] == b);
+        }
+    }
+
+    printf("test 5 passed\n");
+}
+
 int main(int argc, char* argv[])
 {
     memcache = memcache_init();
@@ -83,4 +115,5 @@ int main(int argc, char* argv[])
     test2();
     test3();
     test4();
+    test5();
 }

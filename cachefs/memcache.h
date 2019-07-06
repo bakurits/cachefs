@@ -47,6 +47,11 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size);
 
 /**
+ * Deletes data with given key from Memcached
+ */
+bool memcache_delete(struct memcache_t* memcache, const char* key);
+
+/**
  * clears all data in Memcached
  */
 bool memcache_clear(struct memcache_t*);
