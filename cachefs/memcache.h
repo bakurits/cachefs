@@ -38,18 +38,18 @@ bool memcache_is_consistent(struct memcache_t*);
 /**
  * Gets Memcached's records
  */
-bool memcache_get(struct memcache_t* memcache, const char* key, void* buff);
+bool memcache_get(struct memcache_t*, const char*, void*);
 
 /**
  * Adds data in Memcached
  */
-bool memcache_add(struct memcache_t* memcache, const char* key,
-    const void* value, size_t size);
+bool memcache_add(struct memcache_t*, const char*,
+    const void*, size_t);
 
 /**
  * Deletes data with given key from Memcached
  */
-bool memcache_delete(struct memcache_t* memcache, const char* key);
+bool memcache_delete(struct memcache_t*, const char*);
 
 /**
  * clears all data in Memcached
