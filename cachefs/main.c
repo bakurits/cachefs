@@ -156,20 +156,6 @@ static void show_help(const char* progname)
 
 int main(int argc, char* argv[])
 {
-
-    struct memcache_t* memcache = memcache_init();
-    int a = 4;
-    char b[20];
-    char c[20];
-    strcpy(b, "tsutskhashvili");
-    for (int i = 1; i <= 10; i++) {
-        memcache_add(memcache, "bakuri", b, strlen(b));
-        memcache_get(memcache, "bakuri", &c);
-        printf("%s\n", c);
-        assert(strcmp(b, c) == 0);
-    }
-
-    return 0;
     int ret;
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
