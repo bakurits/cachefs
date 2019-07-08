@@ -1,6 +1,16 @@
 #include "memcache.h"
+#include <arpa/inet.h>
 #include <assert.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <pthread.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 struct memcache_t {
     int fd;
