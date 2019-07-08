@@ -1,6 +1,7 @@
 #ifndef FREEMAP_H
 #define FREEMAP_H
 
+#include "memcache.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -10,11 +11,12 @@
  * Initializes freemap 
  * This function being called when file system is newly formated 
  * 
+ * mem      : memcache data object 
  * inode_cnt: maximum number of inodes possible
  * 
  * Returns  : true if successfully created
  */
-bool init_freemap(size_t inode_cnt);
+bool init_freemap(struct memcache_t* mem, size_t inode_cnt);
 
 /**
  * Function : get_free_inode

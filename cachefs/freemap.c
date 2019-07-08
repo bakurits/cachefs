@@ -1,11 +1,11 @@
 #include "freemap.h"
-#include "memcache.h"
+
 #include <assert.h>
 #include <string.h>
 
 #define FREEMAP_BLOCK_SIZE 1024
 
-struct memcache* memcache;
+struct memcache_t* memcache;
 int current_block;
 int number_of_blocks;
 
@@ -15,7 +15,7 @@ get_key(char* key, int ind)
     sprintf(key, "FREEMAP#%d", ind);
 }
 
-bool init_freemap(struct memcache_t* mem, int inode_cnt)
+bool init_freemap(struct memcache_t* mem, size_t inode_cnt)
 {
     assert(inode_cnt % FREEMAP_BLOCK_SIZE == 0);
     number_of_blocks = inode_cnt / FREEMAP_BLOCK_SIZE;

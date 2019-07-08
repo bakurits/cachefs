@@ -5,7 +5,6 @@
 #include <netinet/ip.h>
 #include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>

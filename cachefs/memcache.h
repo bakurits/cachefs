@@ -3,6 +3,7 @@
 #define MEMCACHE_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #define MEMCACHED_PORT 11211
 #define MEMCACHED_ADDRESS "127.0.0.1"
