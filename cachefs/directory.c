@@ -103,6 +103,12 @@ struct dir* dir_open(struct inode* inode)
         return NULL;
     }
 }
+struct dir* dir_reopen(struct dir* dir)
+{
+    assert(dir != NULL);
+    assert(dir->inode != NULL);
+    return dir_open(inode_reopen(dir->inode));
+}
 
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
