@@ -86,66 +86,6 @@ struct dir* dir_open_root(void)
     return dir_open(inode_open(ROOT_INODE_ID));
 }
 
-/* Opens the directory for given path and returns a directory for it.
-   Return true if successful, false on failure. */
-struct dir* dir_open_path(struct dir* cwd, char* path)
-{
-    if (path == NULL)
-        return NULL;
-    struct dir* cur;
-    if (strlen(path) > 0 && path[0] == '/') {
-        cur = dir_open_root();
-    } else {
-        if (cwd != NULL) {
-            cur = dir_reopen(cwd);
-        } else
-            cur = dir_open_root();
-    }
-    const char* path_left = path;
-    while (true) {
-        char cur_file[NAME_MAX + 1];
-        int res = get_next_part(cur_file, &path_left);
-        if (res == -1) {
-            dir_close(cur);
-            return NULL;
-        }
-        if (res == 0)
-            break;
-        struct inode* inode = NULL;
-        if (!dir_lookup(cur, cur_file, &inode)) {
-            dir_close(cur);
-            return NULL;
-        }
-        struct dir* next = dir_open(inode);
-        if (next == NULL) {
-            dir_close(cur);
-            return NULL;
-        }
-        dir_close(cur);
-        cur = next;
-    }
-    return cur;
-}
-
-struct inode* inode_from_path(const char* path)
-{
-    char dir_path[strlen(path)];
-    char file_name[NAME_MAX + 1];
-
-    if (!split_file_path(path, dir_path, file_name))
-        return NULL;
-
-    struct dir* prec = dir_open_path(NULL, dir_path);
-    if (prec == NULL)
-        return NULL;
-
-    struct inode* inode = NULL;
-    if (dir_lookup(prec, file_name, &inode))
-        return inode;
-    else
-        return NULL;
-}
-
 /* Destroys DIR and frees associated resources. */
 void dir_close(struct dir* dir)
 {

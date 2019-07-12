@@ -219,3 +219,28 @@ bool inode_is_dir(struct inode* inode)
 {
     return inode->metadata.is_dir;
 }
+
+bool inode_path_register(const char* path, int inode_id)
+{
+    char key[256];
+    sprintf(key, "ipth#%s", path);
+    return memcache_add(memcache, key, &inode_id, sizeof(int));
+}
+
+struct inode* inode_get_from_path(const char* path)
+{
+    char key[256];
+    sprintf(key, "ipth#%s", path);
+    int res = -1;
+    if (memcache_get(memcache, key, &res)) {
+        return inode_open(res);
+    }
+    return NULL;
+}
+
+bool inode_path_delete(const char* path)
+{
+    char key[256];
+    sprintf(key, "ipth#%s", path);
+    return memcache_delete(memcache, key);
+}

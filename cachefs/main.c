@@ -51,12 +51,14 @@ static void* cachefs_init(struct fuse_conn_info* conn,
     (void)conn;
     cfg->kernel_cache = 1;
 
+    printf("FileSistem Initialized\n\n\n");
     memcache = memcache_init();
     if (memcache == NULL)
         return NULL;
 
     init_inodes(memcache);
 
+    printf("FileSistem Initialized\n\n\n");
     if (!memcache_is_consistent(memcache)) {
         assert(memcache_clear(memcache));
         memcache_create(memcache);
@@ -64,13 +66,12 @@ static void* cachefs_init(struct fuse_conn_info* conn,
         int root_inode = get_free_inode();
         printf("%d\n", root_inode);
         assert(root_inode == 0);
-        assert(dir_create(root_inode, 0, 0, 0));
+        assert(dir_create(root_inode, 0, 0, 0755 | S_IFDIR));
         struct dir* root = dir_open_root();
         dir_add(root, ".", 1);
         dir_add(root, "..", 1);
+        inode_path_register("/", root_inode);
     }
-
-    printf("FileSistem Initialized\n\n\n");
 
     return NULL;
 }
@@ -84,7 +85,7 @@ static int cachefs_getattr(const char* path, struct stat* stbuf,
 
     memset(stbuf, 0, sizeof(struct stat));
 
-    struct inode* inode = inode_from_path(path);
+    struct inode* inode = inode_get_from_path(path);
     if (inode == NULL)
         return -ENOENT;
 
@@ -106,7 +107,7 @@ static int cachefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
     (void)flags;
     printf("readdir\n");
 
-    struct inode* inode = inode_from_path(path);
+    struct inode* inode = inode_get_from_path(path);
     if (inode == NULL || !inode_is_dir(inode))
         return -ENOENT;
 
@@ -177,11 +178,12 @@ static int cachefs_mkdir(const char* path, mode_t mode)
         return -1;
     }
 
-    struct dir* parent = dir_open_path(NULL, dir_path);
+    struct dir* parent = dir_open(inode_get_from_path(dir_path));
     struct dir* child = dir_open(inode_open(inode_id));
     dir_add(parent, file_name, inode_id);
     dir_add(child, ".", inode_id);
     dir_add(parent, "..", dir_get_inode(parent)->id);
+    inode_path_register(path, inode_id);
     return 0;
 }
 

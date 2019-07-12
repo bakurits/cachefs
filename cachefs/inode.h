@@ -137,11 +137,45 @@ size_t inode_length(struct inode* inode);
 /**
  * Function : inode_is_dir
  * ----------------------------------------
- * 
+ * Checks if inode is directory 
  * 
  * inode    : inode 
  * 
- * Returns  : length of inode
+ * Returns  : true if inode is directory
  */
 bool inode_is_dir(struct inode* inode);
+
+/**
+ * Function : inode_path_register
+ * ----------------------------------------
+ * Checks if inode is directory 
+ * 
+ * inode    : inode 
+ * 
+ * Returns  : true if inode is directory
+ */
+bool inode_path_register(const char* path, int inode_id);
+
+/**
+ * Function : inode_get_from_path
+ * ----------------------------------------
+ * Checks if inode is directory 
+ * 
+ * inode    : inode 
+ * 
+ * Returns  : true if inode is directory
+ */
+struct inode* inode_get_from_path(const char* path);
+
+/**
+ * Function : inode_path_delete
+ * ----------------------------------------
+ * Checks if inode is directory 
+ * 
+ * inode    : inode 
+ * 
+ * Returns  : true if inode is directory
+ */
+bool inode_path_delete(const char* path);
+
 #endif

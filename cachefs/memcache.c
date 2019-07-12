@@ -112,7 +112,7 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
         int ret_exp, ret_size;
         if (sscanf(data, "VALUE %s %d %d\r\n", ret_key, &ret_exp, &ret_size) < 3)
             return false;
-        printf("asdasdn%d\n", line_start_index(data, 2));
+
         memcpy(buff, data + line_start_index(data, 2), ret_size);
         DumpHex(data, 1024);
         return true;
@@ -130,8 +130,6 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     filled += size;
 
     filled += sprintf(data + filled, "\r\n");
-    printf("add\n");
-    DumpHex(data, filled);
 
     if (write(memcache->fd, data, filled) < filled) {
         return false;

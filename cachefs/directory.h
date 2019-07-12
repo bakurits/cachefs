@@ -18,8 +18,6 @@ struct dir* dir_open(struct inode* inode);
 
 struct dir* dir_open_root();
 
-struct dir* dir_open_path(struct dir* cwd, char* path);
-
 struct dir* dir_reopen(struct dir* dir);
 
 void dir_close(struct dir* dir);
