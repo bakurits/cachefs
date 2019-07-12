@@ -11,15 +11,21 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+/**
+ * Stores inode metada on disk
+ */
 struct inode_disk_metadata {
-    size_t length;
-    bool is_dir;
+    size_t length; // Stores length of inode in bytes
+    bool is_dir; // Stores if inode is directory */
     __mode_t mode;
     __uid_t uid;
     __gid_t gid;
     size_t link_cnt;
 };
 
+/**
+ * Inode stored in memory 
+ */
 struct inode {
     int id;
     int open_cnt;

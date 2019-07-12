@@ -18,15 +18,6 @@ struct dir_entry {
     char name[NAME_MAX + 1];
 };
 
-/* Extracts a file name part from *SRCP into PART, and updates *SRCP so that the
-next call will return the next file name part. Returns 1 if successful, 0 at
-end of string, -1 for a too-long file name part. */
-
-/* Searches DIR for a file with the given NAME.
-   If successful, returns true, sets *EP to the directory entry
-   if EP is non-null, and sets *OFSP to the byte offset of the
-   directory entry if OFSP is non-null.
-   otherwise, returns false and ignores EP and OFSP. */
 static bool lookup(const struct dir* dir, const char* name,
     struct dir_entry* entry_pointer, size_t* offset_pointer)
 {
@@ -120,12 +111,6 @@ bool dir_lookup(const struct dir* dir, const char* name, struct inode** inode)
     return *inode != NULL;
 }
 
-/* Adds a file named NAME to DIR, which must not already contain a
-   file by that name.  The file's inode is in sector
-   INODE_SECTOR.
-   Returns true if successful, false on failure.
-   Fails if NAME is invalid (i.e. too long) or a disk or memory
-   error occurs. */
 bool dir_add(struct dir* dir, const char* name, int inode_id)
 {
     struct dir_entry e;
@@ -135,11 +120,9 @@ bool dir_add(struct dir* dir, const char* name, int inode_id)
     assert(dir != NULL);
     assert(name != NULL);
 
-    /* Check NAME for validity. */
     if (*name == '\0' || strlen(name) > NAME_MAX)
         return false;
 
-    /* Check that NAME is not in use. */
     if (lookup(dir, name, NULL, NULL))
         goto done;
 
@@ -184,9 +167,6 @@ done:
     return success;
 }
 
-/* Reads the next directory entry in DIR and stores the name in
-   NAME.  Returns true if successful, false if the directory
-   contains no more entries. */
 bool dir_readdir(struct dir* dir, char name[NAME_MAX + 1])
 {
     struct dir_entry entry;

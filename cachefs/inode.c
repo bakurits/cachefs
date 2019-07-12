@@ -1,3 +1,4 @@
+
 #include "inode.h"
 #include "freemap.h"
 #include <stdlib.h>
@@ -78,10 +79,10 @@ struct inode* inode_open(int id)
     inode->id = id;
     inode->open_cnt = 1;
     inode->is_deleted = false;
+    pthread_mutex_init(&inode->lock, NULL);
     char key[30];
     get_metadata(key, inode->id);
     pthread_mutex_unlock(&inodes_lock);
-    // TODO: ლისტიდან ამოღება და წაშლა
     if (memcache_get(memcache, key, &inode->metadata))
         return inode;
     else
@@ -90,11 +91,10 @@ struct inode* inode_open(int id)
 
 struct inode* inode_reopen(struct inode* inode)
 {
+    if (inode == NULL)
+        return NULL;
     pthread_mutex_lock(&inode->lock);
-
-    if (inode != NULL) {
-        inode->open_cnt++;
-    }
+    inode->open_cnt++;
     pthread_mutex_unlock(&inode->lock);
     return inode;
 }
@@ -181,10 +181,9 @@ void inode_close(struct inode* inode)
     if (inode == NULL)
         return;
     pthread_mutex_lock(&inode->lock);
-    /* Release resources if this was the last opener. */
-    if (--inode->open_cnt == 0) {
+    inode->open_cnt--;
+    if (inode->open_cnt == 0) {
         list_remove(&inode->elem);
-
         if (inode->is_deleted) {
             char key[30];
             for (int i = 0; i < inode->metadata.length / INODE_BLOCK_SIZE; i++) {
@@ -213,10 +212,14 @@ void inode_remove(struct inode* inode)
 
 size_t inode_length(struct inode* inode)
 {
+    if (inode == NULL)
+        return 0;
     return inode->metadata.length;
 }
 bool inode_is_dir(struct inode* inode)
 {
+    if (inode == NULL)
+        return false;
     return inode->metadata.is_dir;
 }
 
