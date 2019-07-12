@@ -46,7 +46,7 @@ int inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t m
 
     char key[30];
     get_metadata(key, inode_id);
-    bool success = memcache_add(memcache, key, &disk_inode, sizeof(disk_inode));
+    bool success = memcache_add(memcache, key, &disk_inode, sizeof(struct inode_disk_metadata));
     free(disk_inode);
 
     return success;

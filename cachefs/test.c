@@ -109,6 +109,7 @@ void test5()
 struct inode_disk_metadata {
     size_t length;
     bool is_dir;
+    bool si;
     __mode_t mode;
     __uid_t uid;
     __gid_t gid;
@@ -120,29 +121,29 @@ void test6()
     struct inode_disk_metadata a[10];
     for (int i = 0; i < 10; i++) {
 
-        a[i].is_dir = 0;
-        a[i].mode = 1;
-        a[i].link_cnt = 6;
-        a[i].length = 1;
-        a[i].uid = 123;
-        a[i].gid = 5;
+        a[i].is_dir = 1;
+        a[i].mode = 0;
+        a[i].link_cnt = 1;
+        a[i].length = 0;
+        a[i].uid = 0;
+        a[i].gid = 0;
+        a[i].si = 37;
         char key[30];
         sprintf(key, "test6%d", i);
         memcache_add(memcache, key, &a[i], sizeof(struct inode_disk_metadata));
     }
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         char key[30];
 
         sprintf(key, "test6%d", i);
         struct inode_disk_metadata b;
         memcache_get(memcache, key, &b);
-
-        assert(a[i].gid == b.gid);
-        assert(a[i].uid == b.uid);
-        assert(a[i].is_dir == b.is_dir);
         assert(a[i].length == b.length);
-        assert(a[i].link_cnt == b.link_cnt);
+        assert(a[i].is_dir == b.is_dir);
         assert(a[i].mode == b.mode);
+        assert(a[i].uid == b.uid);
+        assert(a[i].gid == b.gid);
+        assert(a[i].link_cnt == b.link_cnt);
     }
 
     printf("test 6 passed\n");
@@ -153,10 +154,10 @@ int main(int argc, char* argv[])
     memcache = memcache_init();
     assert(memcache != NULL);
     assert(memcache_clear(memcache));
-    /*  test1();
+    test1();
     test2();
     test3();
     test4();
-    test5(); */
+    test5();
     test6();
 }

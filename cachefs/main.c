@@ -60,7 +60,11 @@ static void* cachefs_init(struct fuse_conn_info* conn,
     if (!memcache_is_consistent(memcache)) {
         assert(memcache_clear(memcache));
         memcache_create(memcache);
-        assert(dir_create(1, 0, 0, 0));
+        assert(init_freemap(memcache, 1024));
+        int root_inode = get_free_inode();
+        printf("%d\n", root_inode);
+        assert(root_inode == 0);
+        assert(dir_create(root_inode, 0, 0, 0));
         struct dir* root = dir_open_root();
         dir_add(root, ".", 1);
         dir_add(root, "..", 1);

@@ -48,7 +48,7 @@ void DumpHex(const void* data, size_t size)
 int line_start_index(const char* st, int line)
 {
 
-    for (int i = 0; st[i] != '\0'; i++) {
+    for (int i = 0;; i++) {
         if (i == 0 || st[i - 1] == '\n') {
             line--;
             if (line == 0)
@@ -112,7 +112,9 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
         int ret_exp, ret_size;
         if (sscanf(data, "VALUE %s %d %d\r\n", ret_key, &ret_exp, &ret_size) < 3)
             return false;
+        printf("asdasdn%d\n", line_start_index(data, 2));
         memcpy(buff, data + line_start_index(data, 2), ret_size);
+        DumpHex(data, 1024);
         return true;
     } else {
         return false;
@@ -128,6 +130,8 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     filled += size;
 
     filled += sprintf(data + filled, "\r\n");
+    printf("add\n");
+    DumpHex(data, filled);
 
     if (write(memcache->fd, data, filled) < filled) {
         return false;

@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #define NAME_MAX 14
+#define ROOT_INODE_ID 0
 
 /* Opening and closing directories. */
 bool dir_create(int inode_id, __gid_t gid, __uid_t uid, __mode_t mode);
