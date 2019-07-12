@@ -1,38 +1,21 @@
 #include "inode.h"
 #include "freemap.h"
-#include "list.h"
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define INODE_BLOCK_SIZE 512
 
 static void
-get_key(char* key, int ind)
+get_key(char* key, int inode_id, int ind)
 {
-    sprintf(key, "INODE#%d", ind);
+    sprintf(key, "%d#%d", inode_id, ind);
 }
 
 static void
-get_metadata(char* key)
+get_metadata(char* key, int inode_id)
 {
-    sprintf(key, "INODE#METADATA");
+    sprintf(key, "%d#METADATA", inode_id);
 }
-
-struct inode_disk_metadata {
-    size_t length;
-    bool is_dir;
-    size_t link_cnt;
-};
-
-struct inode {
-    int id;
-    int open_cnt;
-    bool is_deleted;
-    struct list_elem elem;
-    pthread_mutex_t lock;
-    struct inode_disk_metadata metadata;
-};
 
 static struct memcache_t* memcache;
 static struct list open_inodes;
@@ -45,7 +28,7 @@ void init_inodes(struct memcache_t* mem)
     pthread_mutex_init(&inodes_lock, NULL);
 }
 
-int inode_create(int inode_id, bool is_dir)
+int inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t mode)
 {
     struct inode_disk_metadata* disk_inode = NULL;
 
@@ -53,12 +36,16 @@ int inode_create(int inode_id, bool is_dir)
     if (disk_inode == NULL) {
         return false;
     }
+
     disk_inode->is_dir = is_dir;
     disk_inode->length = 0;
     disk_inode->link_cnt = 1;
+    disk_inode->gid = gid;
+    disk_inode->uid = uid;
+    disk_inode->mode = mode;
 
     char key[30];
-    get_metadata(key);
+    get_metadata(key, inode_id);
     bool success = memcache_add(memcache, key, &disk_inode, sizeof(disk_inode));
     free(disk_inode);
 
@@ -67,6 +54,7 @@ int inode_create(int inode_id, bool is_dir)
 
 struct inode* inode_open(int id)
 {
+    printf("inode_open\n");
     struct list_elem* e;
     struct inode* inode;
 
@@ -91,7 +79,7 @@ struct inode* inode_open(int id)
     inode->open_cnt = 1;
     inode->is_deleted = false;
     char key[30];
-    get_metadata(key);
+    get_metadata(key, inode->id);
     pthread_mutex_unlock(&inodes_lock);
     // TODO: ლისტიდან ამოღება და წაშლა
     if (memcache_get(memcache, key, &inode->metadata))
@@ -124,7 +112,7 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
         size_t current_block = current / INODE_BLOCK_SIZE;
         size_t next_offset = (current_block + 1) * INODE_BLOCK_SIZE;
         char key[30];
-        get_key(key, current_block);
+        get_key(key, inode->id, current_block);
         char value[INODE_BLOCK_SIZE];
         if (!memcache_get(memcache, key, value))
             goto inode_read_at_end;
@@ -159,7 +147,7 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
         size_t current_block = current / INODE_BLOCK_SIZE;
         size_t next_offset = (current_block + 1) * INODE_BLOCK_SIZE;
         char key[30];
-        get_key(key, current_block);
+        get_key(key, inode->id, current_block);
         char value[INODE_BLOCK_SIZE];
         if (!memcache_get(memcache, key, value))
             goto inode_write_at_end;
@@ -180,7 +168,7 @@ inode_write_at_end:
     if (inode->metadata.length < offset + written) {
         inode->metadata.length = offset + written;
         char key[30];
-        get_metadata(key);
+        get_metadata(key, inode->id);
         memcache_add(memcache, key, &inode->metadata, sizeof(inode->metadata));
     }
     pthread_mutex_unlock(&inode->lock);
@@ -200,10 +188,10 @@ void inode_close(struct inode* inode)
         if (inode->is_deleted) {
             char key[30];
             for (int i = 0; i < inode->metadata.length / INODE_BLOCK_SIZE; i++) {
-                get_key(key, i);
+                get_key(key, inode->id, i);
                 memcache_delete(memcache, key);
             }
-            get_metadata(key);
+            get_metadata(key, inode->id);
             memcache_delete(memcache, key);
         }
 

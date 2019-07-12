@@ -2,6 +2,7 @@
 
 #include "directory.h"
 #include "list.h"
+#include "utils.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,38 +21,6 @@ struct dir_entry {
 /* Extracts a file name part from *SRCP into PART, and updates *SRCP so that the
 next call will return the next file name part. Returns 1 if successful, 0 at
 end of string, -1 for a too-long file name part. */
-static int get_next_part(char part[NAME_MAX + 1], const char** srcp)
-{
-    const char* src = *srcp;
-    char* dst = part;
-    /* Skip leading slashes. If it’s all slashes, we’re done. */
-    while (*src == '/')
-        src++;
-    if (*src == '\0')
-        return 0;
-
-    /* Copy up to NAME_MAX character from SRC to DST. Add null terminator. */
-    while (*src != '/' && *src != '\0') {
-        if (dst < part + NAME_MAX)
-            *dst++ = *src;
-        else
-            return -1;
-        src++;
-    }
-    *dst = '\0';
-
-    /* Advance source pointer. */
-    *srcp = src;
-    return 1;
-}
-
-static void print_dirs(struct dir* dir)
-{
-    printf("Printing dir content\n");
-    char name[NAME_MAX + 1];
-    while (dir_readdir(dir, name))
-        printf("%s\n", name);
-}
 
 /* Searches DIR for a file with the given NAME.
    If successful, returns true, sets *EP to the directory entry
@@ -82,9 +51,9 @@ static void inode_cut(struct inode* inode, size_t start, size_t end)
 {
 }
 
-bool dir_create(int inode_id)
+bool dir_create(int inode_id, __gid_t gid, __uid_t uid, __mode_t mode)
 {
-    return inode_create(inode_id, true);
+    return inode_create(inode_id, true, gid, uid, mode);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -156,6 +125,25 @@ struct dir* dir_open_path(struct dir* cwd, char* path)
         cur = next;
     }
     return cur;
+}
+
+struct inode* inode_from_path(const char* path)
+{
+    char dir_path[strlen(path)];
+    char file_name[NAME_MAX + 1];
+
+    if (!split_file_path(path, dir_path, file_name))
+        return NULL;
+
+    struct dir* prec = dir_open_path(NULL, dir_path);
+    if (prec == NULL)
+        return NULL;
+
+    struct inode* inode = NULL;
+    if (dir_lookup(prec, file_name, &inode))
+        return inode;
+    else
+        return NULL;
 }
 
 /* Destroys DIR and frees associated resources. */

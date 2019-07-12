@@ -1,9 +1,33 @@
+
 #ifndef INODE_H
 #define INODE_H
 
+#define FUSE_USE_VERSION 31
+
+#include "list.h"
 #include "memcache.h"
+#include <fuse.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+struct inode_disk_metadata {
+    size_t length;
+    bool is_dir;
+    __mode_t mode;
+    __uid_t uid;
+    __gid_t gid;
+    size_t link_cnt;
+};
+
+struct inode {
+    int id;
+    int open_cnt;
+    bool is_deleted;
+    struct list_elem elem;
+    pthread_mutex_t lock;
+    struct inode_disk_metadata metadata;
+};
 
 /**
  * Function : init_inodes
@@ -25,7 +49,7 @@ void init_inodes(struct memcache_t* mem);
  *
  * Returns  :
  */
-int inode_create(int inode_id, bool is_dir);
+int inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t mode);
 
 /**
  * Function : inode_open
@@ -37,18 +61,6 @@ int inode_create(int inode_id, bool is_dir);
  * Returns  : inode structure for later operations
  */
 struct inode* inode_open(int id);
-
-/**
- * Function : inode_create
- * ----------------------------------------
- * Creates inode
- * 
- * inode_id     : newly allocated id for inode 
- * is_dir       : indicates if inode is directory
- * 
- * Returns  : id of newly created inode
- */
-int inode_create(int inode_id, bool is_dir);
 
 /**
  * Function : inode_reopen

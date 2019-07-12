@@ -87,7 +87,7 @@ struct memcache_t* memcache_init()
 
 void memcache_create(struct memcache_t* memcache)
 {
-    assert(memcache == NULL);
+    assert(memcache != NULL);
     int value = CONSISTENCY_VALUE;
     memcache_add(memcache, CONSISTENCY_KEY, (void*)&value, sizeof(int));
 }

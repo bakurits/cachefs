@@ -7,7 +7,11 @@
 
 #define FUSE_USE_VERSION 31
 
+#include "directory.h"
+#include "freemap.h"
+#include "inode.h"
 #include "memcache.h"
+#include "utils.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -48,9 +52,18 @@ static void* cachefs_init(struct fuse_conn_info* conn,
     cfg->kernel_cache = 1;
 
     memcache = memcache_init();
-    if (memcache != NULL && !memcache_is_consistent(memcache)) {
-        memcache_clear(memcache);
+    if (memcache == NULL)
+        return NULL;
+
+    init_inodes(memcache);
+
+    if (!memcache_is_consistent(memcache)) {
+        assert(memcache_clear(memcache));
         memcache_create(memcache);
+        assert(dir_create(1, 0, 0, 0));
+        struct dir* root = dir_open_root();
+        dir_add(root, ".", 1);
+        dir_add(root, "..", 1);
     }
 
     printf("FileSistem Initialized\n\n\n");
@@ -61,20 +74,22 @@ static void* cachefs_init(struct fuse_conn_info* conn,
 static int cachefs_getattr(const char* path, struct stat* stbuf,
     struct fuse_file_info* fi)
 {
+    printf("getattr\n path: %s\n", path);
     (void)fi;
     int res = 0;
 
     memset(stbuf, 0, sizeof(struct stat));
-    if (strcmp(path, "/") == 0) {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-    } else if (strcmp(path + 1, options.filename) == 0) {
-        stbuf->st_mode = S_IFREG | 0444;
-        stbuf->st_nlink = 1;
-        stbuf->st_size = strlen(options.contents);
-    } else
-        res = -ENOENT;
 
+    struct inode* inode = inode_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+
+    stbuf->st_mode = inode->metadata.mode;
+    stbuf->st_nlink = inode->metadata.link_cnt;
+    stbuf->st_size = inode_length(inode);
+    stbuf->st_uid = inode->metadata.uid;
+    stbuf->st_gid = inode->metadata.gid;
+    inode_close(inode);
     return res;
 }
 
@@ -85,19 +100,24 @@ static int cachefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
     (void)offset;
     (void)fi;
     (void)flags;
+    printf("readdir\n");
 
-    if (strcmp(path, "/") != 0)
+    struct inode* inode = inode_from_path(path);
+    if (inode == NULL || !inode_is_dir(inode))
         return -ENOENT;
 
-    filler(buf, ".", NULL, 0, 0);
-    filler(buf, "..", NULL, 0, 0);
-    filler(buf, options.filename, NULL, 0, 0);
+    struct dir* dir = dir_open(inode);
+    char name[15];
+    while (dir_readdir(dir, name)) {
+        filler(buf, name, NULL, 0, 0);
+    }
 
     return 0;
 }
 
 static int cachefs_open(const char* path, struct fuse_file_info* fi)
 {
+    printf("open\n");
     if (strcmp(path + 1, options.filename) != 0)
         return -ENOENT;
 
@@ -112,6 +132,7 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
 {
     size_t len;
     (void)fi;
+    printf("read\n");
     if (strcmp(path + 1, options.filename) != 0)
         return -ENOENT;
 
@@ -127,16 +148,67 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
 
 static int cachefs_statfs(const char* path, struct statvfs* buff)
 {
+    printf("statfs\n");
 }
 static void cachefs_destroy(void* private_data)
 {
+    printf("destroy\n");
     memcache_close(memcache);
+}
+static int cachefs_mkdir(const char* path, mode_t mode)
+{
+    printf("mkdir\n");
+    char dir_path[strlen(path)];
+    char file_name[NAME_MAX + 1];
+    if (!split_file_path(path, dir_path, file_name))
+        return -1;
+
+    struct fuse_context* fuse_context = fuse_get_context();
+
+    int inode_id = get_free_inode();
+    if (inode_id < 0)
+        return -1;
+    if (!dir_create(inode_id, fuse_context->gid, fuse_context->uid, mode)) {
+        free_inode(inode_id);
+        return -1;
+    }
+
+    struct dir* parent = dir_open_path(NULL, dir_path);
+    struct dir* child = dir_open(inode_open(inode_id));
+    dir_add(parent, file_name, inode_id);
+    dir_add(child, ".", inode_id);
+    dir_add(parent, "..", dir_get_inode(parent)->id);
+    return 0;
+}
+
+static int cachefs_rmdir(const char* path)
+{
+}
+
+static int cachefs_opendir(const char* path, struct fuse_file_info* fi)
+{
+    printf("opendir\n");
+}
+
+static int cachefs_releasedir(const char* path, struct fuse_file_info* fi)
+{
+    printf("releasedir\n");
+}
+
+static int cachefs_fsyncdir(const char* path, int isdatasync, struct fuse_file_info* fi)
+{
+    printf("fsyncdir\n");
 }
 
 static struct fuse_operations cachefs_oper = {
     .init = cachefs_init,
     .getattr = cachefs_getattr,
+    .mkdir = cachefs_mkdir,
+    .rmdir = cachefs_rmdir,
+    .opendir = cachefs_opendir,
     .readdir = cachefs_readdir,
+    .releasedir = cachefs_releasedir,
+    .fsyncdir = cachefs_fsyncdir,
     .open = cachefs_open,
     .read = cachefs_read,
     .statfs = cachefs_statfs,
