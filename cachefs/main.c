@@ -89,6 +89,7 @@ static int cachefs_getattr(const char* path, struct stat* stbuf,
     if (inode == NULL)
         return -ENOENT;
 
+    printf("%d\n", (int)inode->metadata.mode);
     stbuf->st_mode = inode->metadata.mode;
     stbuf->st_nlink = inode->metadata.link_cnt;
     stbuf->st_size = inode_length(inode);
@@ -173,6 +174,8 @@ static int cachefs_mkdir(const char* path, mode_t mode)
     int inode_id = get_free_inode();
     if (inode_id < 0)
         return -1;
+
+    printf("path : %s \ndir : %s \nfile : %s\n", path, dir_path, file_name);
     if (!dir_create(inode_id, fuse_context->gid, fuse_context->uid, mode)) {
         free_inode(inode_id);
         return -1;
@@ -180,6 +183,8 @@ static int cachefs_mkdir(const char* path, mode_t mode)
 
     struct dir* parent = dir_open(inode_get_from_path(dir_path));
     struct dir* child = dir_open(inode_open(inode_id));
+    assert(parent != NULL);
+    assert(child != NULL);
     dir_add(parent, file_name, inode_id);
     dir_add(child, ".", inode_id);
     dir_add(parent, "..", dir_get_inode(parent)->id);

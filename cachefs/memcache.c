@@ -114,7 +114,6 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
             return false;
 
         memcpy(buff, data + line_start_index(data, 2), ret_size);
-        DumpHex(data, 1024);
         return true;
     } else {
         return false;
