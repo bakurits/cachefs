@@ -1,8 +1,8 @@
 #include "freemap.h"
 
+#include "utils.h"
 #include <assert.h>
 #include <string.h>
-
 #define FREEMAP_BLOCK_SIZE 1024
 
 struct memcache_t* memcache;

@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define MAX_BLOCK_SIZE 4196
+
 struct memcache_t {
     int fd;
 };
@@ -72,13 +74,13 @@ bool memcache_is_consistent(struct memcache_t* memcache)
 
 bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
 {
-    char data[2048];
+    char data[MAX_BLOCK_SIZE];
     int filled = sprintf(data, "get %s\r\n", key);
 
     if (write(memcache->fd, data, filled) < filled) {
         return false;
     }
-    if (read(memcache->fd, data, 2048) >= 0) {
+    if (read(memcache->fd, data, MAX_BLOCK_SIZE) >= 0) {
         char ret_key[64];
         int ret_exp, ret_size;
         if (sscanf(data, "VALUE %s %d %d\r\n", ret_key, &ret_exp, &ret_size) < 3)
@@ -94,8 +96,7 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
 bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size)
 {
-
-    char data[2048];
+    char data[MAX_BLOCK_SIZE];
     int filled = sprintf(data, "set %s 0 0 %zu\r\n", key, size);
     memcpy(data + filled, value, size);
     filled += size;
@@ -103,7 +104,6 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     filled += sprintf(data + filled, "\r\n");
 
     if (write(memcache->fd, data, filled) < filled) {
-
         return false;
     }
     char result[64];
@@ -114,7 +114,7 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
 
 bool memcache_delete(struct memcache_t* memcache, const char* key)
 {
-    char data[2048];
+    char data[MAX_BLOCK_SIZE];
     int filled = sprintf(data, "delete %s\r\n", key);
 
     if (write(memcache->fd, data, filled) < filled) {
@@ -135,11 +135,10 @@ void memcache_close(struct memcache_t* memcache)
 
 bool memcache_clear(struct memcache_t* memcache)
 {
-    char data[2048];
+    char data[MAX_BLOCK_SIZE];
     int filled = sprintf(data, "flush_all\r\n");
 
     if (write(memcache->fd, data, filled) < filled) {
-        assert(1 == 2);
         return false;
     }
 

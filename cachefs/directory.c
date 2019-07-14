@@ -113,21 +113,16 @@ bool dir_add(struct dir* dir, const char* name, int inode_id)
 
     assert(dir != NULL);
     assert(name != NULL);
-    printf("add dir %s \n", name);
     if (*name == '\0' || strlen(name) > NAME_MAX) {
-        printf("incorrect name\n");
         return false;
     }
     if (lookup(dir, name, NULL, NULL)) {
-        printf("already exists\n");
         return false;
     }
 
-    printf("koto\n");
     memcpy(e.name, name, strlen(name) + 1);
     e.inode_id = inode_id;
     e.is_deleted = false;
-    printf("sizeof %zu\n", inode_length(dir->inode));
     return inode_write_at(dir->inode, &e, sizeof e, inode_length(dir->inode)) == sizeof e;
 }
 
@@ -167,7 +162,6 @@ bool dir_readdir(struct dir* dir, char name[NAME_MAX + 1])
         dir->pos = 2 * sizeof(struct dir_entry);
 
     while (inode_read_at(dir->inode, &entry, sizeof entry, dir->pos) == sizeof entry) {
-        printf("pos : %zu dir_entry : %s \n", dir->pos, entry.name);
         dir->pos += sizeof entry;
         if (!entry.is_deleted) {
             memcpy(name, entry.name, NAME_MAX + 1);

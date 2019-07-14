@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define NAME_MAX 15
+#define NAME_MAX 23
 #define ROOT_INODE_ID 0
 
 bool dir_create(int inode_id, __gid_t gid, __uid_t uid, __mode_t mode);

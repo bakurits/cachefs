@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define INODE_BLOCK_SIZE 512
+#define INODE_BLOCK_SIZE 4096
 #define INODE_MAGIC 2341785
 
 static void
@@ -53,7 +53,7 @@ bool inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t 
 
 struct inode* inode_open(int id)
 {
-    printf("inode_open : %d\n", id);
+
     struct list_elem* e;
     struct inode* inode;
 
@@ -103,7 +103,6 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
     size_t offset)
 {
     pthread_mutex_lock(&inode->lock);
-    printf("\n\nstarted reading %d\n\n\n", inode->id);
     char* buffer = buff;
     size_t current = offset;
     size_t end = offset + size;
@@ -122,9 +121,6 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
         in_block_end %= INODE_BLOCK_SIZE;
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
-
-        printf("raeding from block %zu\n", current_block);
-        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
 
         char key[30];
         get_key(key, inode->id, current_block);
@@ -155,7 +151,7 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
     if (block_cnt * INODE_BLOCK_SIZE < inode_length(inode))
         block_cnt++;
 
-    printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset);
+    //printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset);
 
     while (current < end) {
         size_t current_block = current / INODE_BLOCK_SIZE;
@@ -168,8 +164,8 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
 
-        printf("copping in block %zu\n", current_block);
-        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
+        /*   printf("copping in block %zu\n", current_block);
+        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end); */
         char key[30];
         get_key(key, inode->id, current_block);
         char value[INODE_BLOCK_SIZE];
@@ -186,7 +182,7 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
     }
 
 inode_write_at_end:
-    if (inode->metadata.length < offset + written) {
+    if (written > 0 && inode->metadata.length < offset + written) {
         inode->metadata.length = offset + written;
         char key[30];
         get_metadata(key, inode->id);
@@ -213,9 +209,8 @@ void inode_close(struct inode* inode)
             }
             get_metadata(key, inode->id);
             memcache_delete(memcache, key);
+            free_inode(inode->id);
         }
-
-        free_inode(inode->id);
 
         free(inode);
     }
