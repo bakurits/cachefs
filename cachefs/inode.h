@@ -22,6 +22,7 @@ struct inode_disk_metadata {
     __uid_t uid;
     __gid_t gid;
     size_t link_cnt;
+    size_t xattrs_length;
 };
 
 /**
@@ -94,7 +95,7 @@ struct inode* inode_reopen(struct inode* inode);
  * Returns  : number of read bytes
  */
 size_t inode_read_at(struct inode* inode, void* buff, size_t size,
-    size_t offset);
+    size_t offset, bool xattrs);
 
 /**
  * Function : inode_write_at
@@ -109,7 +110,7 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
  * Returns  : number of written bytes
  */
 size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
-    size_t offset);
+    size_t offset, bool xattrs);
 
 /**
  * Function : inode_close
@@ -187,5 +188,7 @@ struct inode* inode_get_from_path(const char* path);
 bool inode_path_delete(const char* path);
 
 bool is_inode(struct inode* inode);
+
+size_t inode_xattrs_length(struct inode* inode);
 
 #endif

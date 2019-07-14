@@ -20,6 +20,11 @@ get_metadata(char* key, int inode_id)
 {
     sprintf(key, "%d#METADATA", inode_id);
 }
+static void
+get_xattrs(char* key, int inode_id, int ind)
+{
+    sprintf(key, "%d#XATTRS%d", inode_id, ind);
+}
 
 static struct memcache_t* memcache;
 static struct list open_inodes;
@@ -42,6 +47,7 @@ bool inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t 
     disk_inode.gid = gid;
     disk_inode.uid = uid;
     disk_inode.mode = mode;
+    disk_inode.xattrs_length = 0;
 
     char key[30];
     get_metadata(key, inode_id);
@@ -100,7 +106,7 @@ struct inode* inode_reopen(struct inode* inode)
 }
 
 size_t inode_read_at(struct inode* inode, void* buff, size_t size,
-    size_t offset)
+    size_t offset, bool xattrs)
 {
     pthread_mutex_lock(&inode->lock);
     char* buffer = buff;
@@ -108,10 +114,13 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
     size_t end = offset + size;
     size_t read = 0;
 
-    if (end > inode_length(inode)) {
-        end = inode_length(inode);
+    size_t length = xattrs ? inode->metadata.xattrs_length : inode->metadata.length;
+
+    if (end > length) {
+        end = length;
     }
 
+    printf("\n\nstarted reading in %d offset : %zu\n\n", inode->id, offset);
     while (current < end) {
         size_t current_block = current / INODE_BLOCK_SIZE;
         size_t next_offset = (current_block + 1) * INODE_BLOCK_SIZE;
@@ -122,8 +131,16 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
 
+        printf("reading from block %zu\n", current_block);
+        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
+
         char key[30];
-        get_key(key, inode->id, current_block);
+        if (!xattrs) {
+            get_key(key, inode->id, current_block);
+        } else {
+            get_xattrs(key, inode->id, current_block);
+        }
+
         char value[INODE_BLOCK_SIZE];
         if (!memcache_get(memcache, key, value))
             goto inode_read_at_end;
@@ -139,19 +156,21 @@ inode_read_at_end:
 }
 
 size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
-    size_t offset)
+    size_t offset, bool xattrs)
 {
     pthread_mutex_lock(&inode->lock);
-
+    bool metadate_modified = false;
     const char* buffer = buff;
     size_t current = offset;
     size_t end = offset + size;
     size_t written = 0;
-    size_t block_cnt = inode_length(inode) / INODE_BLOCK_SIZE;
-    if (block_cnt * INODE_BLOCK_SIZE < inode_length(inode))
+    size_t length = xattrs ? inode->metadata.xattrs_length : inode->metadata.length;
+
+    size_t block_cnt = length / INODE_BLOCK_SIZE;
+    if (block_cnt * INODE_BLOCK_SIZE < length)
         block_cnt++;
 
-    //printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset);
+    printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset);
 
     while (current < end) {
         size_t current_block = current / INODE_BLOCK_SIZE;
@@ -164,14 +183,17 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
 
-        /*   printf("copping in block %zu\n", current_block);
-        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end); */
+        printf("copping in block %zu\n", current_block);
+        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
         char key[30];
-        get_key(key, inode->id, current_block);
+        if (!xattrs) {
+            get_key(key, inode->id, current_block);
+        } else {
+            get_xattrs(key, inode->id, current_block);
+        }
         char value[INODE_BLOCK_SIZE];
         if (current_block < block_cnt && (in_block_end != INODE_BLOCK_SIZE - 1 || in_block_start != 0)) {
-            if (!memcache_get(memcache, key, value))
-                goto inode_write_at_end;
+            memcache_get(memcache, key, value);
         }
 
         memcpy(value + in_block_start, buffer + written, in_block_end - in_block_start + 1);
@@ -182,8 +204,12 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
     }
 
 inode_write_at_end:
-    if (written > 0 && inode->metadata.length < offset + written) {
-        inode->metadata.length = offset + written;
+    if (written > 0 && length < offset + written) {
+        length = offset + written;
+        if (xattrs)
+            inode->metadata.xattrs_length = length;
+        else
+            inode->metadata.length = length;
         char key[30];
         get_metadata(key, inode->id);
         memcache_add(memcache, key, &inode->metadata, sizeof(inode->metadata));
@@ -269,4 +295,9 @@ bool inode_path_delete(const char* path)
 bool is_inode(struct inode* inode)
 {
     return inode != NULL && inode->magic == INODE_MAGIC;
+}
+
+size_t inode_xattrs_length(struct inode* inode)
+{
+    return inode->metadata.xattrs_length;
 }

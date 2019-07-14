@@ -12,6 +12,7 @@
 #include "inode.h"
 #include "memcache.h"
 #include "utils.h"
+#include "xattr.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -170,7 +171,7 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
         return -EISDIR;
     }
 
-    return inode_read_at(inode, buf, size, offset);
+    return inode_read_at(inode, buf, size, offset, false);
 }
 
 static int cachefs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
@@ -187,7 +188,7 @@ static int cachefs_write(const char* path, const char* buf, size_t size, off_t o
         return -EISDIR;
     }
 
-    return inode_write_at(inode, buf, size, offset);
+    return inode_write_at(inode, buf, size, offset, false);
 }
 
 static int cachefs_statfs(const char* path, struct statvfs* buff)
@@ -304,6 +305,7 @@ static int cachefs_fsyncdir(const char* path, int isdatasync, struct fuse_file_i
     printf("fsyncdir\n");
     return 0;
 }
+
 static int cachefs_unlink(const char* path)
 {
     return 0;
@@ -383,23 +385,45 @@ static int cachefs_access(const char* path, int mask)
 
 static int cachefs_setxattr(const char* path, const char* name, const char* buff, size_t size, int flags)
 {
-    return 0;
+    printf("start setxattr\n");
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    if (xattr_add(inode, name, buff, size))
+        return 0;
+    else
+        return -1;
 }
 
 static int cachefs_getxattr(const char* path, const char* name, char* buff, size_t size)
 {
-    printf("getxattr\n");
-    return 0;
+    printf("start getxattr\n");
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    return xattr_get(inode, name, buff, size);
 }
 
 static int cachefs_listxattr(const char* path, char* buff, size_t size)
 {
-    return 0;
+    printf("start listxattr %zu\n", size);
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    return xattr_list(inode, buff, size);
 }
 
 static int cachefs_removexattr(const char* path, const char* name)
 {
-    return 0;
+    printf("start removexattr\n");
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    if (xattr_remove(inode, name)) {
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
 static int cachefs_utimens(const char* path, const struct timespec tv[2], struct fuse_file_info* fi)

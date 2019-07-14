@@ -26,7 +26,7 @@ static bool lookup(const struct dir* dir, const char* name,
     size_t ofs;
     assert(dir != NULL);
     assert(name != NULL);
-    for (ofs = 0; inode_read_at(dir->inode, &entry, sizeof(struct dir_entry), ofs) == sizeof(struct dir_entry);
+    for (ofs = 0; inode_read_at(dir->inode, &entry, sizeof(struct dir_entry), ofs, false) == sizeof(struct dir_entry);
          ofs += sizeof(struct dir_entry)) {
         if (entry.is_deleted)
             continue;
@@ -123,7 +123,7 @@ bool dir_add(struct dir* dir, const char* name, int inode_id)
     memcpy(e.name, name, strlen(name) + 1);
     e.inode_id = inode_id;
     e.is_deleted = false;
-    return inode_write_at(dir->inode, &e, sizeof e, inode_length(dir->inode)) == sizeof e;
+    return inode_write_at(dir->inode, &e, sizeof e, inode_length(dir->inode), false) == sizeof e;
 }
 
 bool dir_remove(struct dir* dir, const char* name)
@@ -143,7 +143,7 @@ bool dir_remove(struct dir* dir, const char* name)
     if (inode == NULL)
         goto done;
     e.is_deleted = true;
-    if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e)
+    if (inode_write_at(dir->inode, &e, sizeof e, ofs, false) != sizeof e)
         goto done;
 
     inode_remove(inode);
@@ -161,7 +161,7 @@ bool dir_readdir(struct dir* dir, char name[NAME_MAX + 1])
     if (dir->pos < 2 * sizeof(struct dir_entry))
         dir->pos = 2 * sizeof(struct dir_entry);
 
-    while (inode_read_at(dir->inode, &entry, sizeof entry, dir->pos) == sizeof entry) {
+    while (inode_read_at(dir->inode, &entry, sizeof entry, dir->pos, false) == sizeof entry) {
         dir->pos += sizeof entry;
         if (!entry.is_deleted) {
             memcpy(name, entry.name, NAME_MAX + 1);
