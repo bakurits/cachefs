@@ -1,4 +1,5 @@
 #include "memcache.h"
+#include "utils.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <netinet/in.h>
@@ -14,36 +15,6 @@
 struct memcache_t {
     int fd;
 };
-
-void DumpHex(const void* data, size_t size)
-{
-    char ascii[17];
-    size_t i, j;
-    ascii[16] = '\0';
-    for (i = 0; i < size; ++i) {
-        printf("%02X ", ((unsigned char*)data)[i]);
-        if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
-            ascii[i % 16] = ((unsigned char*)data)[i];
-        } else {
-            ascii[i % 16] = '.';
-        }
-        if ((i + 1) % 8 == 0 || i + 1 == size) {
-            printf(" ");
-            if ((i + 1) % 16 == 0) {
-                printf("|  %s \n", ascii);
-            } else if (i + 1 == size) {
-                ascii[(i + 1) % 16] = '\0';
-                if ((i + 1) % 16 <= 8) {
-                    printf(" ");
-                }
-                for (j = (i + 1) % 16; j < 16; ++j) {
-                    printf("   ");
-                }
-                printf("|  %s \n", ascii);
-            }
-        }
-    }
-}
 
 int line_start_index(const char* st, int line)
 {
@@ -123,6 +94,7 @@ bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
 bool memcache_add(struct memcache_t* memcache, const char* key,
     const void* value, size_t size)
 {
+
     char data[2048];
     int filled = sprintf(data, "set %s 0 0 %zu\r\n", key, size);
     memcpy(data + filled, value, size);
@@ -131,10 +103,13 @@ bool memcache_add(struct memcache_t* memcache, const char* key,
     filled += sprintf(data + filled, "\r\n");
 
     if (write(memcache->fd, data, filled) < filled) {
+
         return false;
     }
     char result[64];
-    return (read(memcache->fd, result, 64) >= 0 && strncmp(result, "STORED", 6) == 0);
+    bool res = (read(memcache->fd, result, 64) >= 0 && strncmp(result, "STORED", 6) == 0);
+
+    return res;
 }
 
 bool memcache_delete(struct memcache_t* memcache, const char* key)

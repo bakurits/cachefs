@@ -51,14 +51,12 @@ static void* cachefs_init(struct fuse_conn_info* conn,
     (void)conn;
     cfg->kernel_cache = 1;
 
-    printf("FileSistem Initialized\n\n\n");
     memcache = memcache_init();
     if (memcache == NULL)
         return NULL;
 
     init_inodes(memcache);
 
-    printf("FileSistem Initialized\n\n\n");
     if (!memcache_is_consistent(memcache)) {
         assert(memcache_clear(memcache));
         memcache_create(memcache);
@@ -68,34 +66,38 @@ static void* cachefs_init(struct fuse_conn_info* conn,
         assert(root_inode == 0);
         assert(dir_create(root_inode, 0, 0, 0755 | S_IFDIR));
         struct dir* root = dir_open_root();
-        dir_add(root, ".", 1);
-        dir_add(root, "..", 1);
+        assert(dir_add(root, ".", root_inode));
+        assert(dir_add(root, "..", root_inode));
         inode_path_register("/", root_inode);
     }
 
+    printf("FileSistem Initialized\n\n\n");
     return NULL;
 }
 
 static int cachefs_getattr(const char* path, struct stat* stbuf,
     struct fuse_file_info* fi)
 {
-    printf("getattr\n path: %s\n", path);
+    printf("begin getattr\n path: %s\n", path);
     (void)fi;
     int res = 0;
 
     memset(stbuf, 0, sizeof(struct stat));
 
     struct inode* inode = inode_get_from_path(path);
-    if (inode == NULL)
+    if (inode == NULL) {
+        printf("cant find file getattr\n");
         return -ENOENT;
+    }
 
-    printf("%d\n", (int)inode->metadata.mode);
+    printf("%d\n", (int)inode->id);
     stbuf->st_mode = inode->metadata.mode;
     stbuf->st_nlink = inode->metadata.link_cnt;
     stbuf->st_size = inode_length(inode);
     stbuf->st_uid = inode->metadata.uid;
     stbuf->st_gid = inode->metadata.gid;
     inode_close(inode);
+    printf("end getattr\n");
     return res;
 }
 
@@ -106,18 +108,25 @@ static int cachefs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
     (void)offset;
     (void)fi;
     (void)flags;
-    printf("readdir\n");
+    printf("begin readdir\n");
 
-    struct inode* inode = inode_get_from_path(path);
-    if (inode == NULL || !inode_is_dir(inode))
+    struct dir* dir = (struct dir*)fi->fh;
+
+    if (dir == NULL || !is_inode(dir_get_inode(dir))) {
+        dir = dir_open(inode_get_from_path(path));
+    }
+    if (dir == NULL) {
         return -ENOENT;
-
-    struct dir* dir = dir_open(inode);
-    char name[15];
+    }
+    printf("bakuri %zu\n", inode_length(dir_get_inode(dir)));
+    fi->fh = (uint64_t)dir;
+    dir = dir_reopen(dir);
+    char name[30];
     while (dir_readdir(dir, name)) {
         filler(buf, name, NULL, 0, 0);
     }
-
+    dir_close(dir);
+    printf("end readdir\n");
     return 0;
 }
 
@@ -152,63 +161,151 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
     return size;
 }
 
+static int cachefs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
+{
+}
+
 static int cachefs_statfs(const char* path, struct statvfs* buff)
 {
     printf("statfs\n");
 }
+
 static void cachefs_destroy(void* private_data)
 {
     printf("destroy\n");
     memcache_close(memcache);
 }
+
 static int cachefs_mkdir(const char* path, mode_t mode)
 {
-    printf("mkdir\n");
+    printf("begin mkdir\n");
     char dir_path[strlen(path)];
     char file_name[NAME_MAX + 1];
-    if (!split_file_path(path, dir_path, file_name))
+    if (!split_file_path(path, dir_path, file_name)) {
+        printf("cant mk dir 1 mkdir\n");
         return -1;
+    }
 
     struct fuse_context* fuse_context = fuse_get_context();
 
     int inode_id = get_free_inode();
-    if (inode_id < 0)
+    if (inode_id < 0) {
+        printf("cant mk dir 2 mkdir\n");
         return -1;
+    }
 
     printf("path : %s \ndir : %s \nfile : %s\n", path, dir_path, file_name);
-    if (!dir_create(inode_id, fuse_context->gid, fuse_context->uid, mode)) {
+    if (!dir_create(inode_id, fuse_context->gid, fuse_context->uid, mode | S_IFDIR)) {
         free_inode(inode_id);
+        printf("cant mk dir 3 mkdir\n");
         return -1;
     }
 
     struct dir* parent = dir_open(inode_get_from_path(dir_path));
     struct dir* child = dir_open(inode_open(inode_id));
+
     assert(parent != NULL);
     assert(child != NULL);
-    dir_add(parent, file_name, inode_id);
-    dir_add(child, ".", inode_id);
-    dir_add(parent, "..", dir_get_inode(parent)->id);
+
+    assert(dir_add(parent, file_name, inode_id));
+    assert(dir_add(child, ".", inode_id));
+    assert(dir_add(child, "..", dir_get_inode(parent)->id));
     inode_path_register(path, inode_id);
+    printf("end mkdir\n");
     return 0;
 }
 
 static int cachefs_rmdir(const char* path)
 {
+
+    printf("begin rmdir %s\n", path);
+    char dir_path[strlen(path)];
+    char file_name[NAME_MAX + 1];
+    if (!split_file_path(path, dir_path, file_name)) {
+        printf("cant mk dir 1 mkdir\n");
+        return -1;
+    }
+
+    if (!strcmp(path, "/"))
+        return -EPERM;
+
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL) {
+        printf("end rmdir\n");
+        return -ENOENT;
+    }
+
+    if (!inode_is_dir(inode)) {
+        printf("end rmdir\n");
+        return -ENOTDIR;
+    }
+
+    struct dir* child = dir_open(inode);
+
+    if (!dir_is_empty(child)) {
+        return -ENOENT;
+    }
+
+    struct dir* parent = dir_open(inode_get_from_path(dir_path));
+    dir_remove(parent, file_name);
+    inode_path_delete(path);
+    return 0;
 }
 
 static int cachefs_opendir(const char* path, struct fuse_file_info* fi)
 {
-    printf("opendir\n");
+    printf("begin opendir %s\n", path);
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL) {
+        printf("end opendir\n");
+        return -ENOENT;
+    }
+    if (!inode_is_dir(inode)) {
+        printf("end opendir\n");
+        return -ENOTDIR;
+    }
+    struct dir* dir = dir_open(inode);
+    fi->fh = (uint64_t)dir;
+    printf("end opendir\n");
+    return 0;
 }
 
 static int cachefs_releasedir(const char* path, struct fuse_file_info* fi)
 {
-    printf("releasedir\n");
+    printf("begin releasedir\n");
+    struct dir* dir = (struct dir*)fi->fh;
+    if (dir == NULL || !is_inode(dir_get_inode(dir))) {
+        printf("end releasedir\n");
+        return -ENOTDIR;
+    }
+
+    dir_close(dir);
+    fi->fh = 0;
+    printf("begin releasedir\n");
+    return 0;
 }
 
 static int cachefs_fsyncdir(const char* path, int isdatasync, struct fuse_file_info* fi)
 {
     printf("fsyncdir\n");
+}
+static int cachefs_unlink(const char* path)
+{
+}
+static int cachefs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
+{
+    printf("create\n");
+}
+
+static int cachefs_release(const char* path, struct fuse_file_info* fi)
+{
+}
+
+static int cachefs_flush(const char* path, struct fuse_file_info* fi)
+{
+}
+static int cachefs_fsync(const char* path, int isdatasync, struct fuse_file_info* fi)
+{
 }
 
 static struct fuse_operations cachefs_oper = {
@@ -223,7 +320,13 @@ static struct fuse_operations cachefs_oper = {
     .open = cachefs_open,
     .read = cachefs_read,
     .statfs = cachefs_statfs,
-    .destroy = cachefs_destroy
+    .destroy = cachefs_destroy,
+    .unlink = cachefs_unlink,
+    .create = cachefs_create,
+    .write = cachefs_write,
+    .release = cachefs_release,
+    .flush = cachefs_flush,
+    .fsync = cachefs_fsync
 };
 
 static void show_help(const char* progname)

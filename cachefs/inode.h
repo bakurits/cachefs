@@ -6,10 +6,11 @@
 
 #include "list.h"
 #include "memcache.h"
-#include <fuse.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#define DIR_MAGIC 123130234
 
 /**
  * Stores inode metada on disk
@@ -31,6 +32,7 @@ struct inode {
     int open_cnt;
     bool is_deleted;
     struct list_elem elem;
+    int magic;
     pthread_mutex_t lock;
     struct inode_disk_metadata metadata;
 };
@@ -55,7 +57,7 @@ void init_inodes(struct memcache_t* mem);
  *
  * Returns  :
  */
-int inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t mode);
+bool inode_create(int inode_id, bool is_dir, __gid_t gid, __uid_t uid, __mode_t mode);
 
 /**
  * Function : inode_open
@@ -183,5 +185,7 @@ struct inode* inode_get_from_path(const char* path);
  * Returns  : true if inode is directory
  */
 bool inode_path_delete(const char* path);
+
+bool is_inode(struct inode* inode);
 
 #endif

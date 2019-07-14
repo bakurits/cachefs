@@ -1,3 +1,4 @@
+#include "inode.h"
 #include "memcache.h"
 #include <assert.h>
 #include <errno.h>
@@ -106,7 +107,7 @@ void test5()
     printf("test 5 passed\n");
 }
 
-struct inode_disk_metadata {
+struct inode_disk_metadata1 {
     size_t length;
     bool is_dir;
     bool si;
@@ -118,7 +119,7 @@ struct inode_disk_metadata {
 
 void test6()
 {
-    struct inode_disk_metadata a[10];
+    struct inode_disk_metadata1 a[10];
     for (int i = 0; i < 10; i++) {
 
         a[i].is_dir = 1;
@@ -130,13 +131,13 @@ void test6()
         a[i].si = 37;
         char key[30];
         sprintf(key, "test6%d", i);
-        memcache_add(memcache, key, &a[i], sizeof(struct inode_disk_metadata));
+        memcache_add(memcache, key, &a[i], sizeof(struct inode_disk_metadata1));
     }
     for (int i = 0; i < 1; i++) {
         char key[30];
 
         sprintf(key, "test6%d", i);
-        struct inode_disk_metadata b;
+        struct inode_disk_metadata1 b;
         memcache_get(memcache, key, &b);
         assert(a[i].length == b.length);
         assert(a[i].is_dir == b.is_dir);
@@ -149,15 +150,40 @@ void test6()
     printf("test 6 passed\n");
 }
 
+void test7()
+{
+    init_inodes(memcache);
+    assert(inode_create(3123, 1, 0, 0, 0));
+    struct inode* inode = inode_open(3123);
+
+    assert(inode != NULL);
+    char value[100];
+    value[0] = 'b';
+    value[1] = 'h';
+    value[2] = 'd';
+    value[3] = 'c';
+
+    size_t ans = inode_write_at(inode, value, 4, 1023);
+    printf("%zu\n", ans);
+    assert(ans == 4);
+    char res[100];
+    ans = inode_read_at(inode, res, 4, 1021);
+    printf("%zu\n", ans);
+    assert(res[2] == 'b');
+    assert(res[3] == 'h');
+    printf("test 7 passed\n");
+}
+
 int main(int argc, char* argv[])
 {
     memcache = memcache_init();
     assert(memcache != NULL);
     assert(memcache_clear(memcache));
-    test1();
+    /* test1();
     test2();
     test3();
     test4();
     test5();
-    test6();
+    test6(); */
+    test7();
 }
