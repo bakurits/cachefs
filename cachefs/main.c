@@ -19,7 +19,9 @@
 #include <fuse.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /*
  * Command line options
@@ -99,6 +101,7 @@ static int cachefs_getattr(const char* path, struct stat* stbuf,
     stbuf->st_size = inode_length(inode);
     stbuf->st_uid = inode->metadata.uid;
     stbuf->st_gid = inode->metadata.gid;
+
     inode_close(inode);
     printf("end getattr\n");
     return res;
@@ -428,7 +431,7 @@ static int cachefs_getxattr(const char* path, const char* name, char* buff, size
     printf("start getxattr\n");
     struct inode* inode = inode_get_from_path(path);
     if (inode == NULL)
-        return -ENOENT;
+        return -1;
     return xattr_get(inode, name, buff, size);
 }
 
@@ -437,7 +440,7 @@ static int cachefs_listxattr(const char* path, char* buff, size_t size)
     printf("start listxattr %zu\n", size);
     struct inode* inode = inode_get_from_path(path);
     if (inode == NULL)
-        return -ENOENT;
+        return -1;
     return xattr_list(inode, buff, size);
 }
 
@@ -446,7 +449,7 @@ static int cachefs_removexattr(const char* path, const char* name)
     printf("start removexattr\n");
     struct inode* inode = inode_get_from_path(path);
     if (inode == NULL)
-        return -ENOENT;
+        return -1;
     if (xattr_remove(inode, name)) {
         return 0;
     } else {
@@ -531,6 +534,8 @@ static int cachefs_link(const char* from, const char* to)
 }
 static int cachefs_symlink(const char* to, const char* from)
 {
+    printf("\n\nto : %s from :%s\n\n", to, from);
+    return 0;
 }
 static int cachefs_readlink(const char* path, char* buf, size_t size)
 {
