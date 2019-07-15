@@ -77,7 +77,6 @@ static void* cachefs_init(struct fuse_conn_info* conn,
         inode_path_register("/", root_inode);
     }
 
-    printf("FileSistem Initialized\n\n\n");
     return NULL;
 }
 
@@ -252,7 +251,6 @@ static int cachefs_rmdir(const char* path)
     char dir_path[strlen(path)];
     char file_name[NAME_MAX + 1];
     if (!split_file_path(path, dir_path, file_name)) {
-        printf("cant mk dir 1 mkdir\n");
         return -1;
     }
 

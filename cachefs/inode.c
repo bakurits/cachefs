@@ -120,7 +120,6 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
         end = length;
     }
 
-    printf("\n\nstarted reading in %d offset : %zu\n\n", inode->id, offset);
     while (current < end) {
         size_t current_block = current / INODE_BLOCK_SIZE;
         size_t next_offset = (current_block + 1) * INODE_BLOCK_SIZE;
@@ -130,10 +129,6 @@ size_t inode_read_at(struct inode* inode, void* buff, size_t size,
         in_block_end %= INODE_BLOCK_SIZE;
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
-
-        printf("reading from block %zu\n", current_block);
-        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
-
         char key[30];
         if (!xattrs) {
             get_key(key, inode->id, current_block);
@@ -284,7 +279,6 @@ struct inode* inode_get_from_path(const char* path)
     int res = -1;
 
     if (memcache_get(memcache, key, &res)) {
-        printf("get inode : %d\n", res);
         return inode_open(res);
     }
     return NULL;

@@ -14,7 +14,6 @@ static bool lookup(struct inode* inode, const char* name,
          ofs += sizeof(struct attr_entry)) {
         if (entry.is_deleted)
             continue;
-        printf("\n\nlookup %s %s \n\n", name, entry.key);
         if (!strcmp(name, entry.key)) {
             if (entry_pointer != NULL)
                 *entry_pointer = entry;
@@ -85,7 +84,6 @@ int xattr_list(struct inode* inode, char* buffer, size_t size)
     bzero(buffer, size);
     while (inode_read_at(inode, &entry, sizeof entry, pos, true) == sizeof entry) {
         pos += sizeof entry;
-        printf("\n\nlistdir %s %d\n\n", entry.key, (int)entry.value_size);
         if (!entry.is_deleted) {
             size_t new_pos = buf_pos + strlen(entry.key) + entry.value_size + 2;
             if (new_pos < size) {
@@ -96,7 +94,6 @@ int xattr_list(struct inode* inode, char* buffer, size_t size)
             buf_pos = new_pos;
         }
     }
-    printf("list-dir %zu\n", buf_pos);
     return buf_pos;
 }
 
