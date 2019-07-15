@@ -229,10 +229,15 @@ void inode_close(struct inode* inode)
         list_remove(&inode->elem);
         if (inode->is_deleted) {
             char key[30];
-            for (int i = 0; i < inode->metadata.length / INODE_BLOCK_SIZE; i++) {
+            for (int i = 0; i <= inode->metadata.length / INODE_BLOCK_SIZE; i++) {
                 get_key(key, inode->id, i);
                 memcache_delete(memcache, key);
             }
+            for (int i = 0; i <= inode->metadata.xattrs_length / INODE_BLOCK_SIZE; i++) {
+                get_xattrs(key, inode->id, i);
+                memcache_delete(memcache, key);
+            }
+
             get_metadata(key, inode->id);
             memcache_delete(memcache, key);
             free_inode(inode->id);
@@ -300,4 +305,13 @@ bool is_inode(struct inode* inode)
 size_t inode_xattrs_length(struct inode* inode)
 {
     return inode->metadata.xattrs_length;
+}
+
+bool inode_flush_metadata(struct inode* inode)
+{
+    if (inode == NULL)
+        return false;
+    char key[30];
+    get_metadata(key, inode->id);
+    return memcache_add(memcache, key, &inode->metadata, sizeof(inode->metadata));
 }

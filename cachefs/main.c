@@ -308,6 +308,24 @@ static int cachefs_fsyncdir(const char* path, int isdatasync, struct fuse_file_i
 
 static int cachefs_unlink(const char* path)
 {
+    printf("start unlink\n");
+    char dir_path[strlen(path)];
+    char file_name[NAME_MAX + 1];
+    if (!split_file_path(path, dir_path, file_name)) {
+        return -1;
+    }
+
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL) {
+        return -ENOENT;
+    }
+
+    struct dir* dir = dir_open(inode_get_from_path(dir_path));
+    dir_remove(dir, file_name);
+    inode_path_delete(path);
+    inode->metadata.link_cnt--;
+    inode_flush_metadata(inode);
+    inode_remove(inode);
     return 0;
 }
 static int cachefs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
@@ -431,6 +449,63 @@ static int cachefs_utimens(const char* path, const struct timespec tv[2], struct
     return 0;
 }
 
+static int cachefs_chmod(const char* path, mode_t mode, struct fuse_file_info* fi)
+{
+}
+
+static int cachefs_chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* fi)
+{
+}
+
+static int cachefs_truncate(const char* path, off_t size, struct fuse_file_info* fi)
+{
+}
+
+static int cachefs_link(const char* from, const char* to)
+{
+    printf("begin link %s %s\n", from, to);
+    char dir_path[strlen(to)];
+    char file_name[NAME_MAX + 1];
+    if (!split_file_path(to, dir_path, file_name)) {
+        return -1;
+    }
+
+    struct dir* to_dir = dir_open(inode_get_from_path(dir_path));
+    if (to_dir == NULL) {
+        printf("cant open from dir : %s\n", dir_path);
+        return -ENOENT;
+    }
+
+    struct inode* from_inode = inode_get_from_path(from);
+    if (from_inode == NULL) {
+        printf("cant open from file : %s\n", from);
+        return -ENOENT;
+    }
+
+    if (inode_is_dir(from_inode)) {
+        return -EPERM;
+    }
+
+    if (inode_get_from_path(to)) {
+        return -EEXIST;
+    }
+
+    assert(dir_add(to_dir, file_name, from_inode->id));
+    inode_path_register(to, from_inode->id);
+    from_inode->metadata.link_cnt++;
+    inode_flush_metadata(from_inode);
+    inode_close(from_inode);
+    dir_close(to_dir);
+    printf("end link\n");
+    return 0;
+}
+static int cachefs_symlink(const char* to, const char* from)
+{
+}
+static int cachefs_readlink(const char* path, char* buf, size_t size)
+{
+}
+
 static struct fuse_operations cachefs_oper = {
     .init = cachefs_init,
     .getattr = cachefs_getattr,
@@ -455,7 +530,14 @@ static struct fuse_operations cachefs_oper = {
     .getxattr = cachefs_getxattr,
     .listxattr = cachefs_listxattr,
     .removexattr = cachefs_removexattr,
-    .utimens = cachefs_utimens
+    .utimens = cachefs_utimens,
+    .chmod = cachefs_chmod,
+    .chown = cachefs_chown,
+    .truncate = cachefs_truncate,
+    .link = cachefs_link,
+    .symlink = cachefs_symlink,
+    .readlink = cachefs_readlink
+
 };
 
 static void show_help(const char* progname)

@@ -191,4 +191,6 @@ bool is_inode(struct inode* inode);
 
 size_t inode_xattrs_length(struct inode* inode);
 
+bool inode_flush_metadata(struct inode* inode);
+
 #endif
