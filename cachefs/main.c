@@ -145,6 +145,7 @@ static int cachefs_open(const char* path, struct fuse_file_info* fi)
         return -ENOENT;
     }
     if (inode_is_dir(inode)) {
+        inode_close(inode);
         return -EISDIR;
     }
     printf("end open\n");
@@ -168,6 +169,7 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
         return -ENOENT;
     }
     if (inode_is_dir(inode)) {
+        inode_close(inode);
         return -EISDIR;
     }
 
@@ -185,6 +187,7 @@ static int cachefs_write(const char* path, const char* buf, size_t size, off_t o
         return -ENOENT;
     }
     if (inode_is_dir(inode)) {
+        inode_close(inode);
         return -EISDIR;
     }
 
@@ -231,6 +234,10 @@ static int cachefs_mkdir(const char* path, mode_t mode)
     assert(dir_add(child, ".", inode_id));
     assert(dir_add(child, "..", dir_get_inode(parent)->id));
     inode_path_register(path, inode_id);
+
+    dir_close(parent);
+    dir_close(child);
+
     printf("end mkdir\n");
     return 0;
 }
@@ -255,18 +262,21 @@ static int cachefs_rmdir(const char* path)
     }
 
     if (!inode_is_dir(inode)) {
+        inode_close(inode);
         return -ENOTDIR;
     }
 
     struct dir* child = dir_open(inode);
 
     if (!dir_is_empty(child)) {
+        dir_close(child);
         return -ENOENT;
     }
 
     struct dir* parent = dir_open(inode_get_from_path(dir_path));
     dir_remove(parent, file_name);
     inode_path_delete(path);
+    dir_close(parent);
     return 0;
 }
 
@@ -451,10 +461,25 @@ static int cachefs_utimens(const char* path, const struct timespec tv[2], struct
 
 static int cachefs_chmod(const char* path, mode_t mode, struct fuse_file_info* fi)
 {
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    inode->metadata.mode = mode;
+    inode_flush_metadata(inode);
+    inode_close(inode);
+    return 0;
 }
 
 static int cachefs_chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* fi)
 {
+    struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+    inode->metadata.gid = gid;
+    inode->metadata.uid = uid;
+    inode_flush_metadata(inode);
+    inode_close(inode);
+    return 0;
 }
 
 static int cachefs_truncate(const char* path, off_t size, struct fuse_file_info* fi)
@@ -479,14 +504,19 @@ static int cachefs_link(const char* from, const char* to)
     struct inode* from_inode = inode_get_from_path(from);
     if (from_inode == NULL) {
         printf("cant open from file : %s\n", from);
+        dir_close(to_dir);
         return -ENOENT;
     }
 
     if (inode_is_dir(from_inode)) {
+        dir_close(to_dir);
+        inode_close(from_inode);
         return -EPERM;
     }
 
     if (inode_get_from_path(to)) {
+        dir_close(to_dir);
+        inode_close(from_inode);
         return -EEXIST;
     }
 
