@@ -68,6 +68,7 @@ Vagrant.configure("2") do |config|
 	apt-get install -y memcached
 	sleep 3
 	sed -i 's/-m 64/-m 2048/' /etc/memcached.conf
+	sed -i 's/# -M/-M/' /etc/memcached.conf
 	systemctl restart memcached.service
 	apt-get install -y build-essential attr git ninja-build meson pkg-config
 	DEBIAN_FRONTEND=noninteractive apt-get -y install tshark
