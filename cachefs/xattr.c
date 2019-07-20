@@ -89,7 +89,6 @@ int xattr_list(struct inode* inode, char* buffer, size_t size)
             if (new_pos < size) {
                 strncpy(buffer + buf_pos, entry.key, strlen(entry.key));
                 strncpy(buffer + buf_pos + strlen(entry.key) + 1, entry.value, entry.value_size);
-                DumpHex(buffer, size);
             }
             buf_pos = new_pos;
         }

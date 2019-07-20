@@ -277,13 +277,13 @@ bool inode_path_register(const char* path, int inode_id)
 
 struct inode* inode_get_from_path(const char* path)
 {
-    printf("getting key : %s\n\n", path);
+    /* printf("getting key : %s\n\n", path); */
     char key[256];
     sprintf(key, "ipth#%s", path);
     int res = -1;
 
     if (memcache_get(memcache, key, &res)) {
-        printf("\n\n\n resssss :          %d\n", res);
+        /*         printf("\n\n\n resssss :          %d\n", res); */
         return inode_open(res);
     }
     return NULL;

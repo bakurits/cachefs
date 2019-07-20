@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #define MAX_BLOCK_SIZE 4196
-#define CONNECTION_COUNT 1
+#define CONNECTION_COUNT 5
 
 struct memcache_t {
     int fds[CONNECTION_COUNT];
@@ -33,13 +33,11 @@ static int get_fd(struct memcache_t* memcache)
         }
     }
     pthread_mutex_unlock(&memcache->lock);
-    printf("getting fd #%d\n", res);
     return res;
 }
 
 static void release_fd(struct memcache_t* memcache, int fd)
 {
-    printf("releasing fd #%d\n", fd);
     if (fd < 0)
         return;
 
@@ -115,6 +113,7 @@ bool memcache_is_consistent(struct memcache_t* memcache)
 
 bool memcache_get(struct memcache_t* memcache, const char* key, void* buff)
 {
+    /*     printf("memcache get : %s\n", key); */
     int fd = get_fd(memcache);
     if (fd < 0)
         return false;
