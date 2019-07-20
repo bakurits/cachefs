@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #define MAX_BLOCK_SIZE 4196
-#define CONNECTION_COUNT 5
+#define CONNECTION_COUNT 1
 
 struct memcache_t {
     int fds[CONNECTION_COUNT];
@@ -68,7 +68,6 @@ int line_start_index(const char* st, int line)
 
 struct memcache_t* memcache_init()
 {
-    printf("yleeeio\n");
     struct memcache_t* memcache = malloc(sizeof(struct memcache_t));
     if (memcache == NULL)
         return NULL;
@@ -94,7 +93,6 @@ struct memcache_t* memcache_init()
         }
 
         memcache->fds[i] = clientfd;
-        printf("yleeeio    %d\n", clientfd);
         memcache->in_use[i] = false;
     }
     pthread_mutex_init(&memcache->lock, NULL);
