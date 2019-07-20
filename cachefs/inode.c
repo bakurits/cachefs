@@ -3,8 +3,11 @@
 #include "freemap.h"
 #include "utils.h"
 #include <assert.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define INODE_BLOCK_SIZE 4096
 #define INODE_MAGIC 2341785
@@ -308,4 +311,37 @@ bool inode_flush_metadata(struct inode* inode)
     char key[30];
     get_metadata(key, inode->id);
     return memcache_add(memcache, key, &inode->metadata, sizeof(inode->metadata));
+}
+
+bool inode_check_permission(struct inode* inode, permission_t permission)
+{
+    if (getuid() == inode->metadata.uid) {
+        switch (permission) {
+        case READ:
+            return (inode->metadata.mode & S_IRUSR) != 0;
+        case WRITE:
+            return (inode->metadata.mode & S_IWUSR) != 0;
+        default:
+            return (inode->metadata.mode & S_IXUSR) != 0;
+        }
+    } else if (getgid() == inode->metadata.gid) {
+        switch (permission) {
+        case READ:
+            return (inode->metadata.mode & S_IRGRP) != 0;
+        case WRITE:
+            return (inode->metadata.mode & S_IWGRP) != 0;
+        case EXECUTE:
+            return (inode->metadata.mode & S_IXGRP) != 0;
+        }
+    } else {
+        switch (permission) {
+        case READ:
+            return (inode->metadata.mode & S_IROTH) != 0;
+        case WRITE:
+            return (inode->metadata.mode & S_IWOTH) != 0;
+        case EXECUTE:
+            return (inode->metadata.mode & S_IXOTH) != 0;
+        }
+    }
+    return false;
 }

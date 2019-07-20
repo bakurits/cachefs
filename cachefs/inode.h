@@ -12,6 +12,12 @@
 
 #define DIR_MAGIC 123130234
 
+typedef enum {
+    READ = 0,
+    WRITE = 1,
+    EXECUTE = 3
+} permission_t;
+
 /**
  * Stores inode metada on disk
  */
@@ -192,5 +198,7 @@ bool is_inode(struct inode* inode);
 size_t inode_xattrs_length(struct inode* inode);
 
 bool inode_flush_metadata(struct inode* inode);
+
+bool inode_check_permission(struct inode* inode, permission_t permission);
 
 #endif

@@ -409,6 +409,25 @@ static int cachefs_fsync(const char* path, int isdatasync, struct fuse_file_info
 static int cachefs_access(const char* path, int mask)
 {
     printf("access\n");
+    /*  struct inode* inode = inode_get_from_path(path);
+    if (inode == NULL)
+        return -ENOENT;
+
+    if (mask & R_OK) {
+        if (!inode_check_permission(inode, READ))
+            return -EACCES;
+    }
+
+    if (mask & W_OK) {
+        if (!inode_check_permission(inode, WRITE))
+            return -EACCES;
+    }
+
+    if (mask & X_OK) {
+        if (!inode_check_permission(inode, EXECUTE))
+            return -EACCES;
+    }
+ */
     return 0;
 }
 
