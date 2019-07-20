@@ -168,7 +168,7 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
     if (block_cnt * INODE_BLOCK_SIZE < length)
         block_cnt++;
 
-    printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset);
+    /* printf("\n\nstarted writing in %d offset : %zu\n\n", inode->id, offset); */
 
     while (current < end) {
         size_t current_block = current / INODE_BLOCK_SIZE;
@@ -181,8 +181,8 @@ size_t inode_write_at(struct inode* inode, const void* buff, size_t size,
         size_t in_block_start = current;
         in_block_start %= INODE_BLOCK_SIZE;
 
-        printf("copping in block %zu\n", current_block);
-        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end);
+        /* printf("copping in block %zu\n", current_block);
+        printf("from : %zu to : %zu \n\n", in_block_start, in_block_end); */
         char key[30];
         if (!xattrs) {
             get_key(key, inode->id, current_block);
@@ -277,11 +277,13 @@ bool inode_path_register(const char* path, int inode_id)
 
 struct inode* inode_get_from_path(const char* path)
 {
+    printf("getting key : %s\n\n", path);
     char key[256];
     sprintf(key, "ipth#%s", path);
     int res = -1;
 
     if (memcache_get(memcache, key, &res)) {
+        printf("\n\n\n resssss :          %d\n", res);
         return inode_open(res);
     }
     return NULL;
