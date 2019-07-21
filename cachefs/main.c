@@ -142,14 +142,17 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
     (void)fi;
     printf("read\n");
 
-    struct inode* inode = (struct inode*)fi->fh;
+    struct inode* inode = inode_get_from_path(path);
 
-    if (inode == NULL || !is_inode(inode)) {
-        inode = inode_get_from_path(path);
-    }
     if (inode == NULL) {
         return -ENOENT;
     }
+
+    if (inode_check_permission(inode, READ)) {
+        inode_close(inode);
+        return -EACCES;
+    }
+
     if (inode_is_dir(inode)) {
         inode_close(inode);
         return -EISDIR;
@@ -160,14 +163,18 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
 
 static int cachefs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
 {
-    struct inode* inode = (struct inode*)fi->fh;
 
-    if (inode == NULL || !is_inode(inode)) {
-        inode = inode_get_from_path(path);
-    }
+    struct inode* inode = inode_get_from_path(path);
+
     if (inode == NULL) {
         return -ENOENT;
     }
+
+    if (inode_check_permission(inode, WRITE)) {
+        inode_close(inode);
+        return -EACCES;
+    }
+
     if (inode_is_dir(inode)) {
         inode_close(inode);
         return -EISDIR;
@@ -200,6 +207,11 @@ static int cachefs_mkdir(const char* path, mode_t mode)
     struct inode* parent_inode = inode_get_from_path(dir_path);
     if (parent_inode == NULL) {
         return -ENOENT;
+    }
+
+    if (inode_check_permission(parent_inode, WRITE)) {
+        inode_close(parent_inode);
+        return -EACCES;
     }
 
     struct inode* current = inode_get_from_path(path);
@@ -388,7 +400,6 @@ static int cachefs_fsync(const char* path, int isdatasync, struct fuse_file_info
 static int cachefs_access(const char* path, int mask)
 {
     printf("access\n");
-    return 0;
     struct inode* inode = inode_get_from_path(path);
     if (inode == NULL)
         return -ENOENT;
