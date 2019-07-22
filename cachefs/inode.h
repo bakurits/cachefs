@@ -52,7 +52,7 @@ struct inode {
  * mem      : memcache data object 
  *
  */
-void init_inodes(struct memcache_t* mem);
+void init_inodes(struct memcache_t* mem, __gid_t gid, __uid_t uid);
 
 /**
  * Function : inode_create

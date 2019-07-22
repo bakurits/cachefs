@@ -32,11 +32,15 @@ get_xattrs(char* key, int inode_id, int ind)
 static struct memcache_t* memcache;
 static struct list open_inodes;
 static pthread_mutex_t inodes_lock;
+__gid_t root_g_id;
+__uid_t root_u_id;
 
-void init_inodes(struct memcache_t* mem)
+void init_inodes(struct memcache_t* mem, __gid_t gid, __uid_t uid)
 {
     memcache = mem;
     list_init(&open_inodes);
+    root_g_id = gid;
+    root_u_id = uid;
     pthread_mutex_init(&inodes_lock, NULL);
 }
 
@@ -317,6 +321,14 @@ bool inode_flush_metadata(struct inode* inode)
 
 bool inode_check_permission(struct inode* inode, permission_t permission)
 {
+    /*  printf("\n\n\n permissions\n");
+    printf("ids %d %d\n", (int)getuid(), (int)inode->metadata.uid);
+    printf("gids %d %d\n", (int)getgid(), (int)inode->metadata.gid);
+    printf("mode %d\n\n\n", (int)inode->metadata.mode);
+    printf("root %d %d\n\n\n", (int)root_g_id, (int)root_u_id); */
+    if (getuid() == root_u_id || getgid() == root_g_id) {
+        return true;
+    }
     if (getuid() == inode->metadata.uid) {
         switch (permission) {
         case READ:
