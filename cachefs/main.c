@@ -148,10 +148,10 @@ static int cachefs_read(const char* path, char* buf, size_t size, off_t offset,
         return -ENOENT;
     }
 
-    if (inode_check_permission(inode, READ)) {
+    /* if (inode_check_permission(inode, READ)) {
         inode_close(inode);
         return -EACCES;
-    }
+    } */
 
     if (inode_is_dir(inode)) {
         inode_close(inode);
@@ -170,10 +170,10 @@ static int cachefs_write(const char* path, const char* buf, size_t size, off_t o
         return -ENOENT;
     }
 
-    if (inode_check_permission(inode, WRITE)) {
+    /* if (inode_check_permission(inode, WRITE)) {
         inode_close(inode);
         return -EACCES;
-    }
+    } */
 
     if (inode_is_dir(inode)) {
         inode_close(inode);
@@ -209,10 +209,10 @@ static int cachefs_mkdir(const char* path, mode_t mode)
         return -ENOENT;
     }
 
-    if (inode_check_permission(parent_inode, WRITE)) {
+    /* if (inode_check_permission(parent_inode, WRITE)) {
         inode_close(parent_inode);
         return -EACCES;
-    }
+    } */
 
     struct inode* current = inode_get_from_path(path);
     if (current != NULL) {
@@ -332,7 +332,6 @@ static int cachefs_unlink(const char* path)
 }
 static int cachefs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
 {
-    fi->fh = 0;
     printf("create\n");
     struct inode* inode = inode_get_from_path(path);
     if (inode != NULL) {
